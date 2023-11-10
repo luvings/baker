@@ -1,0 +1,8 @@
+#!/bin/bash
+
+date >> /tmp/DDD
+echo "$*" >> /tmp/DDD
+
+MNT=/home/huang/tmp
+DIR=${MNT}${PWD##$HOME}
+ssh -q -t len "export PATH=/usr/local/bin:\$PATH; cd $DIR; export DISPLAY=:0; $*"
