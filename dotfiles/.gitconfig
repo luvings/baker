@@ -1,0 +1,139 @@
+# https://github.com/fniessen/git-config
+
+[user]
+	name = huang
+	email = luvings@live.cn
+
+[alias]
+	skip = !"SKIP=.git/info/skip; src() { while read line; do line=\"$(echo \"$line\" | sed -e 's/ *#.*$//' -e 's/\\r//')\"; [ -n \"$line\" ] && echo \"$line\"; done; }; glob() { bash -i -c \"while read g; do ls -d \"\\$g\"; done;\"; }; skip() { while read dir; do echo \"$dir\"; git ls-files \"$dir\"/ | xargs git update-index \"$@\"; done; }; f() { case \"$1\" in -e) ${EDITOR:-vi} $SKIP;; -v) git ls-files -v;; -r) cat $SKIP | src | glob | skip --no-skip-worktree;; *) cat $SKIP | src | glob | skip --skip-worktree;; esac; }; f"
+	alias = "!git config -l | grep alias | cut -c 7- | sort"
+	#st = status -s -b
+	st = status
+	ci = commit
+	co = checkout
+	sb = show-branch
+	cp = cherry-pick
+	b = branch
+	d = diff
+	l = log --pretty=format:'%C(auto)%h %s%d        %C(yellow)%an %ad%C(reset)' --date=short
+	hist = log --pretty=format:'%C(auto)%h %s%d      %C(yellow)%an %ad%C(reset)' --graph --date=short
+	plog = log --pretty=format:\"%Cred%h %Creset - %Cgreen%<(8,trunc)%an %<(12,trunc)%ai%x08 : %C(yellow)%s\"
+	staged = diff --cached
+	unstage = reset HEAD --
+	rma = !git ls-files --deleted -z | xargs -0 git rm
+	incoming = log ..@{u} --stat
+	# Show a single diffstat (number of added and deleted lines for all changed files):
+	in-what = diff --stat ...@{u}
+	fetch-when = !stat -c %y .git/FETCH_HEAD
+	# Show what I've done today
+	today = !git log --since=midnight --author=\"`git config user.name`\" --no-merges --all
+	# List all untracked files.
+	ls-untracked = ls-files --others
+	ls-ignored = ls-files --others --ignored --exclude-standard
+	serve-this = daemon --verbose --export-all --base-path=.git --reuseaddr --strict-paths .git/
+	# `git exec make` in any subdirectory
+	exec = '!exec '
+	root = rev-parse --show-toplevel
+
+	# branch
+	where = "branch -a --contains"
+	bs = for-each-ref --sort=-committerdate refs/heads refs/remotes --format='%(committerdate:short) %(HEAD) %(align:20)%(refname:short)%(end) %(objectname:short)%(if)%(upstream)%(then) [%(color:red)%(upstream:short)%(color:reset)] %(upstream:track)%(color:reset)%(end) %(contents:subject) - %(authorname) (%(color:green)%(committerdate:relative)%(color:reset))'
+
+	# merge
+	ours = "!f() { git checkout --ours $@ && git add $@; }; f"
+	theirs = "!f() { git checkout --theirs $@ && git add $@; }; f"
+	conflicts = "!git ls-files -u | cut -f 2 | sort -u"
+
+	# archive
+	export = archive -o latest.tar.gz -9 --prefix=latest/
+	snapshot = !git stash save "Snapshot: $(date +\"%F %a %R\")" && git stash apply "stash@{0}"
+
+	# rebase
+	rebase-with-prefix = "!f() { git -c core.editor=\"sed -i '1s/^/'$2': /'\" -c sequence.editor=\"sed -i 's/^pick/reword/'\" rebase -i $1; }; f"
+
+[core]
+	editor = vi
+	quotepath = false
+	pager = diff-highlight | less -RFX
+	#abbrev = 12
+
+[log]
+	decorate = short
+
+[pretty]
+	fixes = Fixes: %h (\"%s\")
+
+[push]
+	default = simple
+
+[diff]
+	algorithm = minimal
+	compactionHeuristic = true
+	renames = true
+
+[color]
+	ui = auto
+	interactive = auto
+	branch = auto
+	diff = auto
+	status = auto
+
+[color "diff"]
+	plain = normal
+	meta = yellow bold
+	frag = magenta bold
+	old = red bold
+	new = green bold
+	commit = yellow
+	whitespace = red reverse
+
+[color "diff-highlight"]
+	oldNormal = red bold
+	oldHighlight = "red bold 52"
+	newNormal = "green bold"
+	newHighlight = "green bold 22"
+
+[color "branch"]
+	current = cyan bold
+	local = green bold
+	remote = red bold
+	upstream = red bold
+	plain = yellow reverse
+
+[color "status"]
+	header = normal
+	added = green
+	updated = yellow
+	changed = magenta
+	untracked = red
+	branch = cyan bold
+	nobranch = red reverse
+
+[color "grep"]
+	filename = yellow bold
+	linenumber = magenta bold
+	match = green reverse bold
+	separator = red bold
+	selected = white bold
+	context = black
+	function = red
+
+[merge]
+	tool = meld
+
+[mergetool "ediff"]
+	cmd = emacsclient -c -a \"\"  --eval \"(ediff-merge-files-with-ancestor \\\"$LOCAL\\\" \\\"$REMOTE\\\" \\\"$BASE\\\" nil \\\"$MERGED\\\")\"
+	keepBackup = false
+
+[mergetool "meld"]
+	cmd = meld "$LOCAL" "$MERGED" "$REMOTE" --output "$MERGED"
+	keepBackup = false
+
+[grep]
+	lineNumber = true
+	# Allow extended regular expressions
+	extendedRegexp = true
+	#fullName = true
+
+[http]
+	sslVerify = false
