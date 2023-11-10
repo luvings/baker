@@ -1,0 +1,35 @@
+From dab2f6a9745cc3b8f29ad9c450cb7f395c2a4f10 Mon Sep 17 00:00:00 2001
+From: huang <luvings@live.cn>
+Date: Fri, 10 Nov 2023 14:36:34 +0800
+Subject: [PATCH 2/4] bash: remove history number in completing
+
+---
+ shell/key-bindings.bash | 12 +++---------
+ 1 file changed, 3 insertions(+), 9 deletions(-)
+
+diff --git a/shell/key-bindings.bash b/shell/key-bindings.bash
+index 29c5c96..88227a6 100644
+--- a/shell/key-bindings.bash
++++ b/shell/key-bindings.bash
+@@ -54,15 +54,9 @@ __fzf_cd__() {
+ __fzf_history__() (
+   local line
+   shopt -u nocaseglob nocasematch
+-  line=$(
+-    HISTTIMEFORMAT= history |
+-    FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS --tac -n2..,.. --tiebreak=index --bind=ctrl-r:toggle-sort $FZF_CTRL_R_OPTS +m" $(__fzfcmd) |
+-    command grep '^ *[0-9]') &&
+-    if [[ $- =~ H ]]; then
+-      sed 's/^ *\([0-9]*\)\** .*/!\1/' <<< "$line"
+-    else
+-      sed 's/^ *\([0-9]*\)\** *//' <<< "$line"
+-    fi
++  HISTTIMEFORMAT= history |
++    sed 's/^ *\([0-9]*\)\** *//' |
++    FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS --tac -n2..,.. --tiebreak=index --bind=ctrl-r:toggle-sort $FZF_CTRL_R_OPTS +m" $(__fzfcmd)
+ )
+ 
+ if [[ ! -o vi ]]; then
+-- 
+2.25.1
+

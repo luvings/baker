@@ -1,0 +1,30 @@
+From b79d4a9ef96457a0be735da5432822339bc825d9 Mon Sep 17 00:00:00 2001
+From: huang <luvings@live.cn>
+Date: Fri, 10 Nov 2023 14:36:59 +0800
+Subject: [PATCH 3/4] cat history file directly for full history
+
+---
+ shell/key-bindings.bash | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/shell/key-bindings.bash b/shell/key-bindings.bash
+index 88227a6..91ebf27 100644
+--- a/shell/key-bindings.bash
++++ b/shell/key-bindings.bash
+@@ -52,11 +52,9 @@ __fzf_cd__() {
+ }
+ 
+ __fzf_history__() (
+-  local line
+   shopt -u nocaseglob nocasematch
+-  HISTTIMEFORMAT= history |
+-    sed 's/^ *\([0-9]*\)\** *//' |
+-    FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS --tac -n2..,.. --tiebreak=index --bind=ctrl-r:toggle-sort $FZF_CTRL_R_OPTS +m" $(__fzfcmd)
++  tac $HOME/.bash_history $HOME/.bash_commands 2>/dev/null |
++    FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS --tiebreak=index --bind=ctrl-r:toggle-sort $FZF_CTRL_R_OPTS +m" $(__fzfcmd)
+ )
+ 
+ if [[ ! -o vi ]]; then
+-- 
+2.25.1
+

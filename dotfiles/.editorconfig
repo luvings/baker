@@ -1,0 +1,46 @@
+#
+# References:
+# [EC]          http://editorconfig.org/
+# [LCS]         Linux Coding Style
+#               (https://www.kernel.org/doc/html/v4.10/process/coding-style.html)
+# [PEP8]        Style Guide for Python Code
+#		(https://www.python.org/dev/peps/pep-0008)
+
+# top-most editorconfig file
+root = true
+
+# Set default to match [LCS] .c/.h settings
+# This will also apply to .S, .mk, .sh, Makefile, .dts, etc.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# [LCS] Chapter 2: Breaking long lines and strings
+#       "The limit on the length of lines is 80 columns"
+#max_line_length = 120
+
+# [LCS] Chapter 1: Indentation
+#       "Tabs are 8 characters"
+#       "and thus indentations are also 8 characters"
+#       "Outside of comments,...spaces are never used for indentation"
+tab_width = 8
+indent_size = 8
+indent_style = tab
+
+[*.{c,cpp,h}]
+indent_size = 8
+indent_style = tab
+
+# Adjustment for python which prefers a different style
+# [PEP8] Indentation
+#	 "Use 4 spaces per indentation level."
+[*.{py,rst}]
+indent_size = 4
+indent_style = space
+
+[*.{sh,bash}]
+indent_size = 2
+indent_style = space
+switch_case_indent = true

@@ -1,0 +1,10 @@
+pv -tpreb xenial-minimal-rock64-0.1~dev-1-arm64.img | r sudo dd of=/dev/sdb   #flash
+sudo tail -f /var/log/syslog 2>&1 | tee ~/logs/wl-`date +%F_%H.%M.%S`.log
+unset http_proxy https_proxy
+rsync -avx --progress	#--delete
+rsync -rlptD --progress --delete ~/.empty   #cur_dir
+git reflog expire --expire-unreachable=now --expire=now --all
+git gc --prune=now --aggressive && git fsck --unreachable
+dpkg --get-selections | grep linux
+sudo fdisk /dev/xxx
+./prebuilts/build-tools/linux-x86/bin/ninja -v -d keepdepfile -j16 wlan_drv_gen4m.ko -f ./out/combined-xx

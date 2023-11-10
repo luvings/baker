@@ -1,0 +1,39 @@
+From 6de564ba607a23ad15fe046ff9f3a4a5a8fc826d Mon Sep 17 00:00:00 2001
+From: huang <luvings@live.cn>
+Date: Fri, 10 Nov 2023 14:35:11 +0800
+Subject: [PATCH 1/4] reader: ignore duplicate entries
+
+---
+ src/reader.go | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/reader.go b/src/reader.go
+index 5fd6d87..eff2041 100644
+--- a/src/reader.go
++++ b/src/reader.go
+@@ -73,6 +73,7 @@ func (r *Reader) feed(src io.Reader) {
+ 		delim = '\000'
+ 	}
+ 	reader := bufio.NewReaderSize(src, readerBufferSize)
++	haystack := make(map[string]struct{})
+ 	for {
+ 		// ReadBytes returns err != nil if and only if the returned data does not
+ 		// end in delim.
+@@ -87,8 +88,12 @@ func (r *Reader) feed(src io.Reader) {
+ 					bytea = bytea[:byteaLen-1]
+ 				}
+ 			}
+-			if r.pusher(bytea) {
+-				atomic.StoreInt32(&r.event, int32(EvtReadNew))
++			needle := string(bytea)
++			if _, found := haystack[needle]; !found {
++				haystack[needle] = struct{}{}
++				if r.pusher(bytea) {
++					atomic.StoreInt32(&r.event, int32(EvtReadNew))
++				}
+ 			}
+ 		}
+ 		if err != nil {
+-- 
+2.25.1
+

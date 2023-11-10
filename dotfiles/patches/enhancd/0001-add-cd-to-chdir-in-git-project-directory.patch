@@ -1,0 +1,72 @@
+From 93262789ff973f10a058dae69430f67fe67ff74b Mon Sep 17 00:00:00 2001
+From: huang <luvings@live.cn>
+Date: Fri, 10 Nov 2023 14:45:19 +0800
+Subject: [PATCH] add 'cd =' to chdir in git project directory
+
+---
+ init.sh          |  1 +
+ src/arguments.sh | 17 +++++++++++++++++
+ src/cd.sh        |  7 +++++++
+ 3 files changed, 25 insertions(+)
+
+diff --git a/init.sh b/init.sh
+index 5cb3ae1..b404c82 100644
+--- a/init.sh
++++ b/init.sh
+@@ -9,6 +9,7 @@ export ENHANCD_DISABLE_HYPHEN="${ENHANCD_DISABLE_HYPHEN:-0}"
+ export ENHANCD_DISABLE_HOME="${ENHANCD_DISABLE_HOME:-0}"
+ export ENHANCD_DOT_ARG="${ENHANCD_DOT_ARG:-..}"
+ export ENHANCD_HYPHEN_ARG="${ENHANCD_HYPHEN_ARG:--}"
++export ENHANCD_PROJECT_ARG="${ENHANCD_PROJECT_ARG:-=}"
+ export ENHANCD_DOT_SHOW_FULLPATH="${ENHANCD_DOT_SHOW_FULLPATH:-0}"
+ export ENHANCD_USE_FUZZY_MATCH="${ENHANCD_USE_FUZZY_MATCH:-1}"
+ 
+diff --git a/src/arguments.sh b/src/arguments.sh
+index ced518a..b157389 100644
+--- a/src/arguments.sh
++++ b/src/arguments.sh
+@@ -64,6 +64,23 @@ __enhancd::arguments::dot()
+     fi
+ }
+ 
++__enhancd::arguments::project()
++{
++    local cdup
++    if cdup=$(git rev-parse --show-cdup 2>/dev/null); then
++        echo -n "$(git rev-parse --show-toplevel)/"
++        (
++            if [[ -n $cdup ]]; then
++                cd "$cdup"
++                echo "."
++            fi
++            git ls-tree -rd --name-only HEAD
++        ) | __enhancd::filter::interactive
++        return 0
++    fi
++    return $_ENHANCD_FAILURE
++}
++
+ __enhancd::arguments::none()
+ {
+     if [[ $ENHANCD_DISABLE_HOME == 1 ]]; then
+diff --git a/src/cd.sh b/src/cd.sh
+index c59cf9e..5610c50 100644
+--- a/src/cd.sh
++++ b/src/cd.sh
+@@ -32,6 +32,13 @@ __enhancd::cd()
+             t="$(__enhancd::arguments::dot "$2")"
+             ret=$?
+             ;;
++        "$ENHANCD_PROJECT_ARG")
++            # If a '=' is passed as the argument,
++            # it either returns to the top project directory,
++            # or the subdirectories under project
++            t="$(__enhancd::arguments::project "$2")"
++            ret=$?
++            ;;
+         "-")
+             # When $ENHANCD_HYPHEN_ARG is configured,
+             # this behaves like `cd -`
+-- 
+2.25.1
+

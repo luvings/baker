@@ -1,0 +1,204 @@
+[ -n "${BASH_VERSION}" ] || return
+
+: ${PS1_SAVED:=$PS1}
+
+: ${symbol_has_untracked:=''}
+: ${omg_has_adds_symbol:=''}
+: ${omg_has_deletions_symbol:=''}
+: ${omg_has_cached_deletions_symbol:=''}
+: ${omg_has_modifications_symbol:=''}
+: ${omg_has_cached_modifications_symbol:=''} # 
+: ${omg_tag_symbol:=''} # 
+: ${omg_detached_symbol:=''}
+: ${omg_branch_symbol:=''}
+: ${omg_fast_forward_symbol:=''}
+: ${omg_not_tracked_branch_symbol:=''}
+: ${omg_rebase_symbol:=''}
+: ${omg_merge_symbol:=''}
+: ${omg_remote_symbol:=''}
+: ${omg_push_symbol:=''}
+: ${omg_stashes_symbol:=''}
+
+: ${omg_second_line:="${PS1_SAVED}"}
+#: ${omg_color_highlight:='\e[0;32m'} # green
+: ${omg_color_highlight:=''}
+
+# foreground
+# black='\e[0;30m'
+# red='\e[0;31m'
+# green='\e[0;32m'
+# yellow='\e[0;33m'
+# blue='\e[0;34m'
+# purple='\e[0;35m'
+# cyan='\e[0;36m'
+# white='\e[0;37m'
+
+#background
+# background_black='\e[40m'
+# background_red='\e[41m'
+# background_green='\e[42m'
+# background_yellow='\e[43m'
+# background_blue='\e[44m'
+# background_purple='\e[45m'
+# background_cyan='\e[46m'
+# background_white='\e[47m'
+
+__git_prompt_get_action() {
+    local gitdir="$(git rev-parse --git-dir 2>/dev/null)"
+    [[ -n "$gitdir" ]] || return
+
+    local action=""
+    if [[ -f "$gitdir/rebase-merge/interactive" ]]; then
+        action=${is_rebasing_interactively:-"rebase -i"}
+    elif [[ -d "$gitdir/rebase-merge" ]]; then
+        action=${is_rebasing_merge:-"rebase -m"}
+    elif [[ -d "$gitdir/rebase-apply" ]]; then
+        if [[ -f "$gitdir/rebase-apply/rebasing" ]]; then
+            action=${is_rebasing:-"rebase"}
+        elif [[ -f "$gitdir/rebase-apply/applying" ]]; then
+            action=${is_applying_mailbox_patches:-"am"}
+        else
+            action=${is_rebasing_mailbox_patches:-"am/rebase"}
+        fi
+    elif [[ -f "$gitdir/MERGE_HEAD" ]]; then
+        action=${is_merging:-"merge"}
+    elif [[ -f "$gitdir/CHERRY_PICK_HEAD" ]]; then
+        action=${is_cherry_picking:-"cherry-pick"}
+    elif [[ -f "$gitdir/BISECT_LOG" ]]; then
+        action=${is_bisecting:-"bisect"}
+    fi
+
+    [[ -n $action ]] && printf "%s" "${1-}$action${2-}" || :
+}
+
+__git_prompt_build() {
+    [[ "$(git config --local --get git-prompt.enable 2>/dev/null)" == false ]] && return 1
+    local commit
+    local is_just_init=
+    commit="$(git rev-parse HEAD 2> /dev/null)" || is_just_init=true
+    [[ -n $commit ]] || return 1
+
+    local current_branch
+    local is_detached=
+    local upstream
+    local has_adds= has_untracked_files=
+    local has_modifications= has_modifications_cached=
+    local has_deletions= has_deletions_cached=
+    local action
+    local tag
+    local commits_ahead commits_behind
+    local will_rebase
+    local has_stashes=
+
+    # Git info
+    if [[ ! "${is_just_init}" ]]; then
+        current_branch="$(git rev-parse --abbrev-ref HEAD 2> /dev/null)"
+        current_branch=${current_branch##heads/}
+        [[ $current_branch == 'HEAD' ]] && is_detached=true
+
+        if [[ "${__git_prompt_show_status}" ]]; then
+            local git_status="$(git status --porcelain 2> /dev/null)"
+            [[ $git_status =~ ($'\n'|^).M ]] && has_modifications=true
+            [[ $git_status =~ ($'\n'|^)M ]] && has_modifications_cached=true
+            [[ $git_status =~ ($'\n'|^)A ]] && has_adds=true
+            [[ $git_status =~ ($'\n'|^).D ]] && has_deletions=true
+            [[ $git_status =~ ($'\n'|^)D ]] && has_deletions_cached=true
+            [[ $(grep -c "^??" <<< "${git_status}") -gt 0 ]] && has_untracked_files=true
+        fi
+
+        action="$(__git_prompt_get_action)"
+        tag=$(git describe --exact-match --tags $commit 2> /dev/null)
+
+        upstream=$(git rev-parse --symbolic-full-name --abbrev-ref @{upstream} 2> /dev/null)
+        if [[ -n "${upstream}" ]]; then
+            local commits_diff="$(git log --pretty=oneline --topo-order --left-right ${commit}...${upstream} 2> /dev/null)"
+            commits_ahead=$(\grep -c "^<" <<< "$commits_diff")
+            commits_behind=$(\grep -c "^>" <<< "$commits_diff")
+        fi
+
+        [[ $commits_ahead -gt 0 && $commits_behind -gt 0 ]] && has_diverged=true
+
+        will_rebase=$(git config --get branch.${current_branch}.rebase 2> /dev/null)
+        [[ "$(git stash list -n1 2> /dev/null | wc -l)" -gt 0 ]] && has_stashes=true
+    fi
+
+    __git_prompt_custom_view
+}
+
+__git_prompt_enrich() {
+    local flag="$1"
+    local symbol="$2"
+    local color="${3:-}"
+    if [[ "${flag}" ]]; then
+        if [[ "${color}" ]]; then
+            local reset='\e[0m'     # Text Reset]'
+            echo -n "${color}${symbol}${reset} "
+        else
+            echo -n "${symbol} "
+        fi
+    fi
+}
+
+__git_prompt_custom_view() {
+    local prompt=
+    local reset='\[\e[0m\]'     # Text Reset
+
+    # branch
+    if [[ $is_detached ]]; then
+        prompt+=$(__git_prompt_enrich $is_detached "$omg_detached_symbol ${commit:0:7}")
+    elif [[ -z "${upstream}" ]]; then
+        prompt+=$(__git_prompt_enrich true "${omg_not_tracked_branch_symbol} ${current_branch}" "${omg_color_highlight}")
+    else # has upstream, show relation
+        prompt+=$(__git_prompt_enrich true "${omg_branch_symbol} ${current_branch}")
+
+        local abbrev_upstream=${upstream//\/$current_branch/}
+        if [[ $commits_ahead -gt 0 && $commits_behind -gt 0 ]]; then
+            # has diverged
+            local merge_action=$omg_merge_symbol
+            [[ $will_rebase == true ]] && merge_action=$omg_rebase_symbol
+            prompt+=$(__git_prompt_enrich true "-${commits_behind}+${commits_ahead} ${merge_action} ${abbrev_upstream}" "${omg_color_highlight}")
+
+        elif [[ $commits_behind -gt 0 ]]; then
+            # fast forward
+            prompt+=$(__git_prompt_enrich true "-${commits_behind} ${omg_fast_forward_symbol} ${abbrev_upstream}" "${omg_color_highlight}")
+
+        elif [[ $commits_ahead -gt 0 ]]; then
+            # push
+            prompt+=$(__git_prompt_enrich true "+${commits_ahead} ${omg_push_symbol} ${abbrev_upstream}" "${omg_color_highlight}")
+
+        else
+            # uptodate
+            # prompt+=$(__git_prompt_enrich true "${omg_remote_symbol} ${abbrev_upstream}")
+            :
+        fi
+    fi
+    prompt+=$(__git_prompt_enrich "${tag}" "${omg_tag_symbol}${tag}")
+
+    # status
+    prompt+=$(__git_prompt_enrich "${has_stashes}" $omg_stashes_symbol "${omg_color_highlight}")
+    prompt+=$(__git_prompt_enrich "${has_untracked_files}" $symbol_has_untracked "${omg_color_highlight}")
+    prompt+=$(__git_prompt_enrich "${has_deletions}" $omg_has_deletions_symbol "${omg_color_highlight}")
+    prompt+=$(__git_prompt_enrich "${has_adds}" $omg_has_adds_symbol "${omg_color_highlight}")
+    prompt+=$(__git_prompt_enrich "${has_modifications}" $omg_has_modifications_symbol "${omg_color_highlight}")
+    prompt+=$(__git_prompt_enrich "${has_modifications_cached}" $omg_has_cached_modifications_symbol "${omg_color_highlight}")
+    prompt+=$(__git_prompt_enrich "${has_deletions_cached}" $omg_has_cached_deletions_symbol "${omg_color_highlight}")
+
+    prompt+="${reset}${omg_second_line}"
+    echo "${prompt}"
+}
+
+__git_prompt_show_status=
+git_prompt_toggle_status() {
+    if [[ "${__git_prompt_show_status}" ]]; then
+        __git_prompt_show_status=
+    else
+        __git_prompt_show_status=true
+    fi
+}
+
+git_prompt() {
+    PS1="$(__git_prompt_build)" || PS1=${PS1_SAVED}
+}
+
+[[ "$PROMPT_COMMAND" == *"git_prompt"* ]] \
+  || export PROMPT_COMMAND="git_prompt; $PROMPT_COMMAND"
