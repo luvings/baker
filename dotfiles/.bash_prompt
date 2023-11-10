@@ -1,0 +1,59 @@
+byobu_prompt_status() { local e=$?; [ $e != 0 ] && echo -e "$e "; }
+[ -n "$BYOBU_CHARMAP" ] || BYOBU_CHARMAP=$(locale charmap 2>/dev/null || echo)
+byobu_prompt_symbol() {
+    if [ "$USER" = "root" ]; then
+        printf "%s" "#";
+    else
+        case "$BYOBU_CHARMAP" in
+            "UTF-8")
+                # MATHEMATICAL RIGHT DOUBLE ANGLE BRACKET (U+27EB, Pe): ⟫
+                # printf "%s" "  " # 
+                printf "%s"
+                ;;
+            *)
+                printf "%s" "\$"
+                ;;
+        esac
+    fi
+}
+
+byobu_prompt_dir() {
+    local threshold=60
+    local dir
+    dir="${PWD/#$HOME/\~}"
+    if [[ ${#dir} -gt ${threshold} ]]; then
+        local first
+        local gitdir="$(git rev-parse --show-toplevel 2>/dev/null)"
+        if [[ "$gitdir" ]]; then
+            first="${gitdir/#$HOME/\~}/"
+        else
+            first=${dir:0:${threshold}}
+            first=${first%/*}/
+        fi
+        echo -n "$first"
+        dir=${dir:${#first}}
+        local disp
+        while [[ "${dir}" ]]; do
+            if (( ${#dir} > ${threshold} )); then
+                disp="${dir:0:${threshold}}"
+                [[ "$disp" =~ .+"/" ]] && disp="${disp%/*}"/
+            else
+                disp="$dir"
+            fi
+            echo -en "\n    $disp"
+            dir="${dir:${#disp}}"
+        done
+    else
+        echo -e "$dir"
+    fi
+}
+
+export PROMPT_COMMAND='echo -ne "\033]0;`basename $PWD`\007"'
+
+PS1="\[\e[38;5;202m\]\$(byobu_prompt_status)\[\e[38;5;245m\]\u\[\e[00m\]@\[\e[38;5;172m\]\h\[\e[00m\]:\[\e[1;32m\]\$(byobu_prompt_dir)\[\e[00m\]\$(byobu_prompt_symbol) "
+
+# Write bash history after each command
+[[ "$PROMPT_COMMAND" == *"history -a"* ]] \
+  || export PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
+
+PS2="\[\e[0;33m\]→\[\e[0m\]"
