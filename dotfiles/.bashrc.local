@@ -1,0 +1,26 @@
+# ~/.bashrc.local: executed by bash(1) for non-login shells.
+
+export http_proxy=127.0.0.1:7890
+export https_proxy=127.0.0.1:7890
+
+export SVN_EDITOR=vi
+export TERM=screen-256color-s
+export EDITOR=e
+
+export REMOTE_CMD=r
+_DTS=arch/arm64/boot/dts/rockchip
+
+# path
+PATH=$PWD/prebuilts/build-tools/linux-x86/bin:/usr/local/emacs-28.1/bin:$PATH
+export PATH
+
+# qt
+QT5=$HOME/local/qt-5.11.3
+PATH=$QT5/Tools/QtCreator/bin:$QT5/5.11.3/gcc_64/bin:$PATH
+export PATH
+
+# java/jre
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+export JRE_HOME=${JAVA_HOME}/jre
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+export PATH=${JAVA_HOME}/bin:$PATH
